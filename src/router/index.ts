@@ -9,6 +9,30 @@ const routes: RouteRecordRaw[] = [
       title: '概览',
     },
   },
+  {
+    path: '/search',
+    name: 'search',
+    component: () => import('@/views/SearchView.vue'),
+    meta: {
+      title: '搜索',
+    },
+  },
+  {
+    path: '/bookshelf',
+    name: 'bookshelf',
+    component: () => import('@/views/BookShelfView.vue'),
+    meta: {
+      title: '我的书架',
+    },
+  },
+  {
+    path: '/bookshelf/category',
+    name: 'category-detail',
+    component: () => import('@/views/CategoryDetailView.vue'),
+    meta: {
+      title: '分类详情',
+    },
+  },
 ]
 
 const router = createRouter({
