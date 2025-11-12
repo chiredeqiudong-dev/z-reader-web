@@ -2,12 +2,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import CategoryManager from '@/components/CategoryManager.vue'
-import { authApi, getToken, removeToken } from '@/api'
+import UserProfileModal from '@/components/UserProfileModal.vue'
+import { authApi, getToken, removeToken, type UpdateUserDTO } from '@/api'
 
 const router = useRouter()
 const showUserDropdown = ref(false)
 const userDropdownRef = ref<HTMLElement | null>(null)
 const showCategoryManager = ref(false)
+const showUserProfileModal = ref(false)
 
 interface BookCategory {
   id: string
@@ -267,17 +269,72 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 }
 
-const handleLogout = () => {
-  removeToken()
-  localStorage.removeItem('zr_current_user')
-  showUserDropdown.value = false
-  router.push('/')
+const handleLogout = async () => {
+  try {
+    // 调用后端登出 API
+    await authApi.logout()
+    console.log('后端登出成功')
+  } catch (error) {
+    console.error('后端登出失败:', error)
+    // 即使后端登出失败，也继续清除前端数据
+  } finally {
+    // 清除前端数据
+    removeToken()
+    localStorage.removeItem('zr_current_user')
+    showUserDropdown.value = false
+    router.push('/')
+  }
 }
 
 const handleNavigateToUpload = () => {
   showUserDropdown.value = false
   console.log('导航到书籍上传')
   // TODO: 实现上传页面路由
+}
+
+// 打开个人信息编辑模态框
+const handleOpenProfileModal = () => {
+  showUserDropdown.value = false
+  showUserProfileModal.value = true
+}
+
+// 保存用户信息
+const handleSaveUserProfile = async (profileData: UpdateUserDTO) => {
+  try {
+    const response = await authApi.updateUserInfo(profileData)
+    
+    if (response.code === '2000' && response.data) {
+      // 更新本地用户信息
+      const userInfo = response.data
+      const userData = {
+        id: userInfo.id,
+        username: userInfo.username,
+        nickname: userInfo.nickname,
+        email: userInfo.email,
+        avatar_url: userInfo.avatarUrl,
+        gender: userInfo.gender,
+        bio: userInfo.bio,
+        role: userInfo.role
+      }
+      
+      // 更新 currentUser
+      currentUser.value = userData
+      
+      // 更新 localStorage
+      localStorage.setItem('zr_current_user', JSON.stringify(userData))
+      
+      // 关闭模态框
+      showUserProfileModal.value = false
+      
+      console.log('用户信息更新成功:', userData)
+    } else {
+      console.error('更新用户信息失败:', response.msg)
+      alert('更新失败：' + response.msg)
+    }
+  } catch (error) {
+    console.error('更新用户信息出错:', error)
+    alert('更新失败，请检查网络连接')
+  }
 }
 
 const getUserInitial = () => {
@@ -437,9 +494,25 @@ onUnmounted(() => {
       <!-- 用户信息和按钮 -->
       <div class="mb-8 flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-wread-text">{{ currentUser?.nickname || currentUser?.username }}</h1>
-          <p class="mt-1 text-xs text-wread-text-secondary">{{ currentUser?.bio || '体验卡今日到期' }}</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold text-wread-text">{{ currentUser?.nickname || currentUser?.username }}</h1>
+            <!-- 性别符号 -->
+            <span v-if="currentUser?.gender === 1" class="text-xl text-blue-500" title="男">♂</span>
+            <span v-else-if="currentUser?.gender === 0" class="text-xl text-pink-500" title="女">♀</span>
+            <button
+              @click="handleOpenProfileModal"
+              class="rounded-full p-1.5 text-wread-text-secondary transition hover:bg-wread-bg hover:text-[#1b88ee]"
+              title="编辑个人信息"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+              </svg>
+            </button>
+          </div>
+          <p class="mt-1 text-xs text-wread-text-secondary">{{ currentUser?.bio || '暂无个人简介' }}</p>
+          <p v-if="currentUser?.email" class="mt-0.5 text-xs text-wread-text-secondary">{{ currentUser.email }}</p>
         </div>
+        
         <div class="flex items-center gap-3">
           <button
             @click="showCategoryManager = true"
@@ -518,6 +591,14 @@ onUnmounted(() => {
       @create="handleCreateCategory"
       @update="handleUpdateCategory"
       @delete="handleDeleteCategory"
+    />
+
+    <!-- 用户信息编辑模态框 -->
+    <UserProfileModal
+      :show="showUserProfileModal"
+      :user="currentUser"
+      @close="showUserProfileModal = false"
+      @save="handleSaveUserProfile"
     />
   </div>
 </template>

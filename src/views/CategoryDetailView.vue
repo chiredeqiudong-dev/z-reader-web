@@ -168,10 +168,20 @@ const getUserInitial = () => {
   return name.charAt(0).toUpperCase()
 }
 
-const handleLogout = () => {
-  removeToken()
-  localStorage.removeItem('zr_current_user')
-  router.push('/')
+const handleLogout = async () => {
+  try {
+    // 调用后端登出 API
+    await authApi.logout()
+    console.log('后端登出成功')
+  } catch (error) {
+    console.error('后端登出失败:', error)
+    // 即使后端登出失败，也继续清除前端数据
+  } finally {
+    // 清除前端数据
+    removeToken()
+    localStorage.removeItem('zr_current_user')
+    router.push('/')
+  }
 }
 
 const handleNavigateToShelf = () => {

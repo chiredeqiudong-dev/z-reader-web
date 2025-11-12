@@ -32,6 +32,15 @@ export interface LoginVO {
   userInfo: UserInfoVO
 }
 
+// 更新用户信息 DTO
+export interface UpdateUserDTO {
+  nickname?: string
+  email?: string | null
+  avatar_url?: string | null
+  gender?: 0 | 1
+  bio?: string | null
+}
+
 // Token 管理
 const TOKEN_KEY = 'zr_auth_token'
 
@@ -114,6 +123,29 @@ export const authApi = {
   async getCurrentUser(): Promise<ApiResponse<UserInfoVO>> {
     return request<UserInfoVO>('/api/auth/current-user', {
       method: 'GET',
+    })
+  },
+
+  // 退出登录
+  async logout(): Promise<ApiResponse<void>> {
+    return request<void>('/api/auth/logout', {
+      method: 'POST',
+    })
+  },
+
+  // 更新用户信息
+  async updateUserInfo(dto: UpdateUserDTO): Promise<ApiResponse<UserInfoVO>> {
+    // 将前端的 snake_case 转换为后端的 camelCase
+    const requestData = {
+      nickname: dto.nickname,
+      email: dto.email,
+      avatarUrl: dto.avatar_url,
+      gender: dto.gender,
+      bio: dto.bio
+    }
+    return request<UserInfoVO>('/api/auth/update-user-info', {
+      method: 'PUT',
+      body: JSON.stringify(requestData),
     })
   },
 }

@@ -145,10 +145,20 @@ const saveCurrentUser = (user: UserData) => {
 }
 
 // 退出登录
-const handleLogout = () => {
-  removeToken()
-  localStorage.removeItem(USER_KEY)
-  currentUser.value = null
+const handleLogout = async () => {
+  try {
+    // 调用后端登出 API
+    await authApi.logout()
+    console.log('后端登出成功')
+  } catch (error) {
+    console.error('后端登出失败:', error)
+    // 即使后端登出失败，也继续清除前端数据
+  } finally {
+    // 清除前端数据
+    removeToken()
+    localStorage.removeItem(USER_KEY)
+    currentUser.value = null
+  }
 }
 
 // 导航到书架
