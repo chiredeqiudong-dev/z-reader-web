@@ -189,8 +189,8 @@ const handleNavigateToShelf = () => {
 }
 
 const handleNavigateToUpload = () => {
-  console.log('导航到书籍上传页面')
-  // TODO: 实现书籍上传页面
+  showUserDropdown.value = false
+  router.push('/bookshelf/upload')
 }
 
 onMounted(async () => {

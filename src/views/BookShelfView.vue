@@ -55,8 +55,7 @@ const handleSearch = () => {
 }
 
 const handleAddCategory = () => {
-  console.log('添加新分类')
-  // TODO: 实现添加分类功能
+  router.push('/bookshelf/upload')
 }
 
 const handleCategoryClick = (categoryId: string) => {
@@ -138,8 +137,7 @@ const handleLogout = async () => {
 
 const handleNavigateToUpload = () => {
   showUserDropdown.value = false
-  console.log('导航到书籍上传')
-  // TODO: 实现上传页面路由
+  router.push('/bookshelf/upload')
 }
 
 // 打开个人信息编辑模态框

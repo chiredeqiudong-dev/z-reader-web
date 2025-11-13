@@ -55,9 +55,11 @@ export interface CategoryVO {
 }
 
 // 存储提供商相关类型
+export type StorageType = 'LOCAL' | 'S3' | 'COS' | 'OSS' | 'KODO'
+
 export interface StorageProviderDTO {
   providerName: string
-  storageType: 'local' | 'cloud'
+  storageType: StorageType
   isActive?: 0 | 1
   localRootPath?: string
   endpoint?: string
@@ -71,7 +73,7 @@ export interface StorageProviderDTO {
 export interface StorageProviderVO {
   id: number
   providerName: string
-  storageType: 'local' | 'cloud'
+  storageType: StorageType
   isActive: 0 | 1
   localRootPath?: string
   endpoint?: string

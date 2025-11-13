@@ -168,8 +168,7 @@ const handleNavigateToShelf = () => {
 
 // 导航到上传
 const handleNavigateToUpload = () => {
-  console.log('导航到书籍上传')
-  // TODO: 实现上传页面路由
+  router.push('/bookshelf/upload')
 }
 
 const openLoginModal = () => {

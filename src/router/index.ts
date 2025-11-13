@@ -33,6 +33,14 @@ const routes: RouteRecordRaw[] = [
       title: '分类详情',
     },
   },
+  {
+    path: '/bookshelf/upload',
+    name: 'book-upload',
+    component: () => import('@/views/BookUploadView.vue'),
+    meta: {
+      title: '书籍上传',
+    },
+  },
 ]
 
 const router = createRouter({

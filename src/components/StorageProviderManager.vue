@@ -19,7 +19,7 @@ const errorMessage = ref('')
 // 表单数据
 const formData = ref<StorageProviderDTO>({
   providerName: '',
-  storageType: 'local',
+  storageType: 'LOCAL',
   isActive: 1,
   localRootPath: '',
   endpoint: '',
@@ -63,7 +63,7 @@ const loadProviders = async () => {
 const resetForm = () => {
   formData.value = {
     providerName: '',
-    storageType: 'local',
+    storageType: 'LOCAL',
     isActive: 1,
     localRootPath: '',
     endpoint: '',
@@ -88,11 +88,12 @@ const validateForm = () => {
     formErrors.value.providerName = '提供商名称不能超过32个字符'
   }
 
-  if (formData.value.storageType === 'local') {
+  if (formData.value.storageType === 'LOCAL') {
     if (!formData.value.localRootPath?.trim()) {
       formErrors.value.localRootPath = '请输入本地绝对路径'
     }
-  } else if (formData.value.storageType === 'cloud') {
+  } else {
+    // S3, COS, OSS, KODO 都需要云存储配置
     if (!formData.value.endpoint?.trim()) {
       formErrors.value.endpoint = '请输入云存储端点'
     }
@@ -227,9 +228,24 @@ const handleClose = () => {
 }
 
 // 是否显示本地存储字段
-const isLocalStorage = computed(() => formData.value.storageType === 'local')
+const isLocalStorage = computed(() => formData.value.storageType === 'LOCAL')
 // 是否显示云存储字段
-const isCloudStorage = computed(() => formData.value.storageType === 'cloud')
+const isCloudStorage = computed(() => ['S3', 'COS', 'OSS', 'KODO'].includes(formData.value.storageType))
+
+// 存储类型选项
+const storageTypeOptions = [
+  { value: 'LOCAL', label: '本地存储' },
+  { value: 'S3', label: 'AWS S3' },
+  { value: 'COS', label: '腾讯云 COS' },
+  { value: 'OSS', label: '阿里云 OSS' },
+  { value: 'KODO', label: '七牛云 KODO' }
+]
+
+// 获取存储类型显示名称
+const getStorageTypeLabel = (type: string) => {
+  const option = storageTypeOptions.find(opt => opt.value === type)
+  return option?.label || type
+}
 </script>
 
 <template>
@@ -287,15 +303,15 @@ const isCloudStorage = computed(() => formData.value.storageType === 'cloud')
                     <h3 class="font-medium text-wread-text">{{ provider.providerName }}</h3>
                     <span
                       class="rounded-full px-2 py-0.5 text-xs"
-                      :class="provider.storageType === 'local' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'"
+                      :class="provider.storageType === 'LOCAL' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'"
                     >
-                      {{ provider.storageType === 'local' ? '本地存储' : '云存储' }}
+                      {{ getStorageTypeLabel(provider.storageType) }}
                     </span>
                   </div>
                   <div class="mt-2 space-y-1 text-xs text-wread-text-secondary">
-                    <p v-if="provider.storageType === 'local'">路径: {{ provider.localRootPath }}</p>
-                    <p v-if="provider.storageType === 'cloud'">端点: {{ provider.endpoint }}</p>
-                    <p v-if="provider.storageType === 'cloud'">存储桶: {{ provider.bucketName }}</p>
+                    <p v-if="provider.storageType === 'LOCAL'">路径: {{ provider.localRootPath }}</p>
+                    <p v-if="provider.storageType !== 'LOCAL' && provider.endpoint">端点: {{ provider.endpoint }}</p>
+                    <p v-if="provider.storageType !== 'LOCAL' && provider.bucketName">存储桶: {{ provider.bucketName }}</p>
                     <p v-if="provider.basePath">资源访问前缀: {{ provider.basePath }}</p>
                   </div>
                 </div>
@@ -380,28 +396,15 @@ const isCloudStorage = computed(() => formData.value.storageType === 'cloud')
             <!-- 存储类型 -->
             <div>
               <label class="mb-2 block text-sm font-medium text-wread-text">存储类型 <span class="text-red-500">*</span></label>
-              <div class="flex gap-4">
-                <label class="flex items-center gap-2">
-                  <input
-                    v-model="formData.storageType"
-                    type="radio"
-                    value="local"
-                    :disabled="isSubmitting || mode === 'edit'"
-                    class="h-4 w-4 text-[#1b88ee] focus:ring-[#1b88ee]"
-                  />
-                  <span class="text-sm text-wread-text">本地存储</span>
-                </label>
-                <label class="flex items-center gap-2">
-                  <input
-                    v-model="formData.storageType"
-                    type="radio"
-                    value="cloud"
-                    :disabled="isSubmitting || mode === 'edit'"
-                    class="h-4 w-4 text-[#1b88ee] focus:ring-[#1b88ee]"
-                  />
-                  <span class="text-sm text-wread-text">云存储</span>
-                </label>
-              </div>
+              <select
+                v-model="formData.storageType"
+                :disabled="isSubmitting || mode === 'edit'"
+                class="w-full rounded-lg border border-wread-divider px-4 py-2.5 text-sm text-wread-text focus:border-[#1b88ee] focus:outline-none focus:ring-2 focus:ring-[#1b88ee]/20 disabled:cursor-not-allowed disabled:bg-gray-50"
+              >
+                <option v-for="option in storageTypeOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
               <p v-if="mode === 'edit'" class="mt-1 text-xs text-wread-text-secondary">编辑时无法修改存储类型</p>
             </div>
 
