@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { authApi, getToken, removeToken } from '@/api'
+import { authApi, categoryApi, getToken, removeToken } from '@/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -236,12 +236,37 @@ onMounted(async () => {
 
   // 加载分类数据
   const categoryId = route.query.id as string
-  if (categoryId && mockCategoryData[categoryId]) {
+  
+  if (!categoryId) {
+    // 没有分类ID，返回书架
+    router.push('/bookshelf')
+    return
+  }
+  
+  // 首先检查是否是mock数据
+  if (mockCategoryData[categoryId]) {
     categoryName.value = mockCategoryData[categoryId].name
     books.value = mockCategoryData[categoryId].books
   } else {
-    // 分类不存在，返回书架
-    router.push('/bookshelf')
+    // 从后端加载真实分类数据
+    try {
+      const response = await categoryApi.listCategories()
+      if (response.code === '2000' && response.data) {
+        const category = response.data.find(cat => cat.id === parseInt(categoryId))
+        if (category) {
+          categoryName.value = category.categoryName
+          books.value = [] // TODO: 调用书籍API加载该分类下的书籍
+        } else {
+          // 分类不存在
+          categoryName.value = `分类 ${categoryId}`
+          books.value = []
+        }
+      }
+    } catch (error) {
+      console.error('加载分类详情失败:', error)
+      categoryName.value = `分类 ${categoryId}`
+      books.value = []
+    }
   }
 
   document.addEventListener('click', handleClickOutside)

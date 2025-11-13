@@ -104,8 +104,8 @@ const validateAvatarUrl = (): boolean => {
 // 验证个人简介
 const validateBio = (): boolean => {
   const bio = formData.value.bio.trim()
-  if (bio.length > 255) {
-    errors.value.bio = '个人简介不能超过255个字符'
+  if (bio.length > 50) {
+    errors.value.bio = '个人简介不能超过50个字符'
     return false
   }
   errors.value.bio = ''
@@ -140,7 +140,7 @@ const handleSave = () => {
   const updateData: Partial<UserProfile> = {
     nickname: formData.value.nickname.trim(),
     email: formData.value.email.trim() || null,
-    avatar_url: formData.value.avatar_url.trim() || null,
+    avatar_url: formData.value.avatar_url.trim(), // 清空时传递空字符串而不是null
     gender: formData.value.gender,
     bio: formData.value.bio.trim() || null
   }
@@ -256,14 +256,14 @@ const handleSave = () => {
             <label class="mb-2 block text-sm font-medium text-wread-text">个人简介</label>
             <textarea
               v-model="formData.bio"
-              placeholder="介绍一下自己吧（最多255字符）"
+              placeholder="介绍一下自己吧（最多50字符）"
               rows="3"
               class="w-full rounded-lg border px-4 py-3 text-sm text-wread-text placeholder:text-wread-placeholder focus:outline-none focus:ring-2"
               :class="errors.bio ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : 'border-wread-divider focus:border-[#1b88ee] focus:ring-[#1b88ee]/20'"
               @blur="validateBio"
             ></textarea>
             <p v-if="errors.bio" class="mt-1 text-xs text-red-500">{{ errors.bio }}</p>
-            <p class="mt-1 text-xs text-wread-text-secondary">{{ formData.bio.length }} / 255</p>
+            <p class="mt-1 text-xs text-wread-text-secondary">{{ formData.bio.length }} / 50</p>
           </div>
         </div>
 

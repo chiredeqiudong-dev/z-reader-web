@@ -415,6 +415,7 @@ onUnmounted(() => {
           >
             <!-- 书籍封面网格 -->
             <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-wread-bg shadow-sm transition group-hover:shadow-lg">
+              <!-- 单本书籍 -->
               <div v-if="category.books.length === 1 && category.books[0]" class="h-full w-full">
                 <img
                   :src="category.books[0].cover"
@@ -422,7 +423,8 @@ onUnmounted(() => {
                   class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                 />
               </div>
-              <div v-else class="grid h-full w-full grid-cols-2 gap-0.5 bg-white p-0.5">
+              <!-- 多本书籍 -->
+              <div v-else-if="category.books.length > 1" class="grid h-full w-full grid-cols-2 gap-0.5 bg-white p-0.5">
                 <div
                   v-for="book in category.books.slice(0, 4)"
                   :key="book.id"
@@ -434,6 +436,12 @@ onUnmounted(() => {
                     class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                   />
                 </div>
+              </div>
+              <!-- 空分类 -->
+              <div v-else class="flex h-full w-full items-center justify-center">
+                <svg class="h-16 w-16 text-wread-placeholder" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                </svg>
               </div>
             </div>
 

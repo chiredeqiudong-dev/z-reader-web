@@ -179,14 +179,15 @@ export const authApi = {
   // 更新用户信息
   async updateUserInfo(dto: UpdateUserDTO): Promise<ApiResponse<UserInfoVO>> {
     // 将前端的 snake_case 转换为后端的 camelCase
+    // 如果 avatar_url 是 null 或 undefined，转换为空字符串
     const requestData = {
       nickname: dto.nickname,
       email: dto.email,
-      avatarUrl: dto.avatar_url,
+      avatarUrl: dto.avatar_url ?? '',
       gender: dto.gender,
       bio: dto.bio
     }
-    return request<UserInfoVO>('/api/auth/update-user-info', {
+    return request<UserInfoVO>('/api/auth/update/info', {
       method: 'PUT',
       body: JSON.stringify(requestData),
     })
