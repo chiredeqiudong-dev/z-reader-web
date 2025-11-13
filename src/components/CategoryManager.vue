@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { categoryApi, getErrorMessage, type CategoryVO } from '@/api'
 
 interface Category {
-  id: string
+  id: number
   name: string
   bookCount: number
 }
@@ -14,22 +15,23 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  create: [name: string]
-  update: [id: string, name: string]
-  delete: [id: string]
+  refresh: []
 }>()
 
 const mode = ref<'list' | 'create' | 'edit'>('list')
 const categoryName = ref('')
-const editingCategoryId = ref('')
+const editingCategoryId = ref<number>(0)
 const nameError = ref('')
+const isSubmitting = ref(false)
+const errorMessage = ref('')
 
 watch(() => props.show, (newVal) => {
   if (newVal) {
     mode.value = 'list'
     categoryName.value = ''
-    editingCategoryId.value = ''
+    editingCategoryId.value = 0
     nameError.value = ''
+    errorMessage.value = ''
   }
 })
 
@@ -39,8 +41,8 @@ const validateName = () => {
     nameError.value = '请输入分类名称'
     return false
   }
-  if (name.length < 2 || name.length > 20) {
-    nameError.value = '分类名称长度必须在2-20个字符之间'
+  if (name.length < 1 || name.length > 20) {
+    nameError.value = '分类名称长度必须在1-20个字符之间'
     return false
   }
   nameError.value = ''
@@ -51,6 +53,7 @@ const handleCreate = () => {
   mode.value = 'create'
   categoryName.value = ''
   nameError.value = ''
+  errorMessage.value = ''
 }
 
 const handleEdit = (category: Category) => {
@@ -58,33 +61,76 @@ const handleEdit = (category: Category) => {
   categoryName.value = category.name
   editingCategoryId.value = category.id
   nameError.value = ''
+  errorMessage.value = ''
 }
 
-const handleDelete = (categoryId: string) => {
-  if (confirm('确定要删除该分类吗？分类内的书籍将会移到未分类。')) {
-    emit('delete', categoryId)
+const handleDelete = async (categoryId: number) => {
+  if (!confirm('确定要删除该分类吗？若分类下有书籍则无法删除。')) {
+    return
+  }
+
+  try {
+    const response = await categoryApi.deleteCategory(categoryId)
+    if (response.code === '2000') {
+      emit('refresh')
+    } else {
+      alert(getErrorMessage(response.code))
+    }
+  } catch (error) {
+    console.error('删除分类失败:', error)
+    alert('删除失败，请稍后重试')
   }
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!validateName()) return
+  if (isSubmitting.value) return
 
-  if (mode.value === 'create') {
-    emit('create', categoryName.value.trim())
-  } else if (mode.value === 'edit') {
-    emit('update', editingCategoryId.value, categoryName.value.trim())
+  isSubmitting.value = true
+  errorMessage.value = ''
+
+  try {
+    if (mode.value === 'create') {
+      const response = await categoryApi.createCategory({
+        categoryName: categoryName.value.trim()
+      })
+      
+      if (response.code === '2000') {
+        mode.value = 'list'
+        categoryName.value = ''
+        editingCategoryId.value = 0
+        emit('refresh')
+      } else {
+        errorMessage.value = getErrorMessage(response.code)
+      }
+    } else if (mode.value === 'edit') {
+      const response = await categoryApi.updateCategory(editingCategoryId.value, {
+        categoryName: categoryName.value.trim()
+      })
+      
+      if (response.code === '2000') {
+        mode.value = 'list'
+        categoryName.value = ''
+        editingCategoryId.value = 0
+        emit('refresh')
+      } else {
+        errorMessage.value = getErrorMessage(response.code)
+      }
+    }
+  } catch (error) {
+    console.error('操作失败:', error)
+    errorMessage.value = '操作失败，请检查网络连接'
+  } finally {
+    isSubmitting.value = false
   }
-  
-  mode.value = 'list'
-  categoryName.value = ''
-  editingCategoryId.value = ''
 }
 
 const handleCancel = () => {
   mode.value = 'list'
   categoryName.value = ''
-  editingCategoryId.value = ''
+  editingCategoryId.value = 0
   nameError.value = ''
+  errorMessage.value = ''
 }
 
 const handleClose = () => {
@@ -181,6 +227,11 @@ const handleClose = () => {
 
           <!-- 表单 -->
           <form @submit.prevent="handleSubmit" class="space-y-4">
+            <!-- 错误提示 -->
+            <div v-if="errorMessage" class="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              {{ errorMessage }}
+            </div>
+
             <div>
               <label class="mb-2 block text-sm font-medium text-wread-text">分类名称</label>
               <input
@@ -189,6 +240,7 @@ const handleClose = () => {
                 placeholder="请输入分类名称"
                 class="w-full rounded-lg border px-4 py-3 text-sm text-wread-text placeholder:text-wread-placeholder focus:border-[#1b88ee] focus:outline-none focus:ring-2 focus:ring-[#1b88ee]/20"
                 :class="nameError ? 'border-red-500' : 'border-wread-divider'"
+                :disabled="isSubmitting"
                 autofocus
               />
               <p v-if="nameError" class="mt-1 text-xs text-red-500">{{ nameError }}</p>
@@ -199,15 +251,17 @@ const handleClose = () => {
               <button
                 type="button"
                 @click="handleCancel"
-                class="flex-1 rounded-lg border border-wread-divider bg-white py-3 text-sm font-medium text-wread-text transition hover:bg-wread-bg"
+                :disabled="isSubmitting"
+                class="flex-1 rounded-lg border border-wread-divider bg-white py-3 text-sm font-medium text-wread-text transition hover:bg-wread-bg disabled:cursor-not-allowed disabled:opacity-50"
               >
                 取消
               </button>
               <button
                 type="submit"
-                class="flex-1 rounded-lg bg-[#1b88ee] py-3 text-sm font-medium text-white transition hover:opacity-90"
+                :disabled="isSubmitting"
+                class="flex-1 rounded-lg bg-[#1b88ee] py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {{ mode === 'create' ? '创建' : '保存' }}
+                {{ isSubmitting ? '提交中...' : (mode === 'create' ? '创建' : '保存') }}
               </button>
             </div>
           </form>

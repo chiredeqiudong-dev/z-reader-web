@@ -2,13 +2,15 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import CategoryManager from '@/components/CategoryManager.vue'
+import StorageProviderManager from '@/components/StorageProviderManager.vue'
 import UserProfileModal from '@/components/UserProfileModal.vue'
-import { authApi, getToken, removeToken, type UpdateUserDTO } from '@/api'
+import { authApi, categoryApi, getToken, removeToken, type UpdateUserDTO } from '@/api'
 
 const router = useRouter()
 const showUserDropdown = ref(false)
 const userDropdownRef = ref<HTMLElement | null>(null)
 const showCategoryManager = ref(false)
+const showStorageManager = ref(false)
 const showUserProfileModal = ref(false)
 
 interface BookCategory {
@@ -26,172 +28,10 @@ interface Book {
 
 const currentUser = ref<any>(null)
 const searchQuery = ref('')
+const isLoadingCategories = ref(false)
 
-// 模拟书籍分类数据
-const bookCategories = ref<BookCategory[]>([
-  {
-    id: 'fiction',
-    name: '网文',
-    books: [
-      {
-        id: '1',
-        title: '全职高手',
-        author: '蝴蝶蓝',
-        cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '2',
-        title: '斗破苍穹',
-        author: '天蚕土豆',
-        cover: 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '3',
-        title: '盗墓笔记',
-        author: '南派三叔',
-        cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '4',
-        title: '诛仙',
-        author: '萧鼎',
-        cover: 'https://images.unsplash.com/photo-1491841573634-28140fc7ced7?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'novel',
-    name: '传统小说',
-    books: [
-      {
-        id: '5',
-        title: '活着',
-        author: '余华',
-        cover: 'https://images.unsplash.com/photo-1470499122001-449c5239351a?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '6',
-        title: '白夜行',
-        author: '东野圭吾',
-        cover: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'computer',
-    name: '计算机',
-    books: [
-      {
-        id: '7',
-        title: '深入理解计算机系统',
-        author: 'Randal E. Bryant',
-        cover: 'https://images.unsplash.com/photo-1517430816045-df4b7de11d1d?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '8',
-        title: 'JavaScript高级程序设计',
-        author: 'Nicholas C. Zakas',
-        cover: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'society',
-    name: '社会',
-    books: [
-      {
-        id: '9',
-        title: '人类简史',
-        author: '尤瓦尔·赫拉利',
-        cover: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '10',
-        title: '乌合之众',
-        author: '古斯塔夫·勒庞',
-        cover: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'philosophy',
-    name: '推理',
-    books: [
-      {
-        id: '11',
-        title: '无人生还',
-        author: '阿加莎·克里斯蒂',
-        cover: 'https://images.unsplash.com/photo-1544716278-e513176f20b5?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '12',
-        title: '东方快车谋杀案',
-        author: '阿加莎·克里斯蒂',
-        cover: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'featured',
-    name: '挪威的森林（2023修订版）',
-    books: [
-      {
-        id: '13',
-        title: '挪威的森林',
-        author: '村上春树',
-        cover: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'scifi',
-    name: '科幻',
-    books: [
-      {
-        id: '14',
-        title: '三体',
-        author: '刘慈欣',
-        cover: 'https://images.unsplash.com/photo-1589998059171-988d887df646?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '15',
-        title: '银河帝国',
-        author: '阿西莫夫',
-        cover: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '16',
-        title: '球状闪电',
-        author: '刘慈欣',
-        cover: 'https://images.unsplash.com/photo-1526243741027-444d633d7365?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '17',
-        title: '流浪地球',
-        author: '刘慈欣',
-        cover: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  },
-  {
-    id: 'literature',
-    name: '世界文学',
-    books: [
-      {
-        id: '18',
-        title: '百年孤独',
-        author: '加西亚·马尔克斯',
-        cover: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=240&q=80'
-      },
-      {
-        id: '19',
-        title: '追风筝的人',
-        author: '卡勒德·胡赛尼',
-        cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=240&q=80'
-      }
-    ]
-  }
-])
+// 书籍分类数据（从后端加载）
+const bookCategories = ref<BookCategory[]>([])
 
 // 添加分类占位符
 const addCategoryPlaceholder = {
@@ -225,38 +65,48 @@ const handleCategoryClick = (categoryId: string) => {
   }
 }
 
+// 检查用户是否为管理员
+const isAdmin = computed(() => {
+  return currentUser.value?.role === 0
+})
+
+// 加载分类数据
+const loadCategories = async () => {
+  if (!isAdmin.value) {
+    return // 非管理员不加载分类数据
+  }
+
+  isLoadingCategories.value = true
+  try {
+    const response = await categoryApi.listCategories()
+    if (response.code === '2000' && response.data) {
+      // 将后端数据映射到前端数据结构
+      // 注意：这里暂时没有书籍数据，后续需要与书籍模块集成
+      bookCategories.value = response.data.map(cat => ({
+        id: cat.id.toString(),
+        name: cat.categoryName,
+        books: [] // 暂时为空，等待书籍接口集成
+      }))
+    }
+  } catch (error) {
+    console.error('加载分类失败:', error)
+  } finally {
+    isLoadingCategories.value = false
+  }
+}
+
 // 分类管理相关
 const categoriesForManager = computed(() => {
   return bookCategories.value.map(cat => ({
-    id: cat.id,
+    id: parseInt(cat.id),
     name: cat.name,
     bookCount: cat.books.length
   }))
 })
 
-const handleCreateCategory = (name: string) => {
-  const newCategory: BookCategory = {
-    id: `cat_${Date.now()}`,
-    name,
-    books: []
-  }
-  bookCategories.value.push(newCategory)
-}
-
-const handleUpdateCategory = (id: string, name: string) => {
-  const category = bookCategories.value.find(cat => cat.id === id)
-  if (category) {
-    category.name = name
-  }
-}
-
-const handleDeleteCategory = (id: string) => {
-  const index = bookCategories.value.findIndex(cat => cat.id === id)
-  if (index !== -1) {
-    // 将分类中的书籍移到"未分类"
-    // TODO: 实现未分类逻辑
-    bookCategories.value.splice(index, 1)
-  }
+// 刷新分类列表（CategoryManager emit 的 refresh 事件）
+const handleRefreshCategories = () => {
+  loadCategories()
 }
 
 const toggleUserDropdown = () => {
@@ -367,6 +217,11 @@ onMounted(async () => {
       }
       // 同步到 localStorage
       localStorage.setItem('zr_current_user', JSON.stringify(currentUser.value))
+      
+      // 如果是管理员，加载分类数据
+      if (userInfo.role === 0) {
+        await loadCategories()
+      }
     } else {
       // token 无效，清除并跳转
       removeToken()
@@ -515,10 +370,18 @@ onUnmounted(() => {
         
         <div class="flex items-center gap-3">
           <button
+            v-if="isAdmin"
             @click="showCategoryManager = true"
             class="rounded-full border border-wread-divider bg-white px-5 py-1.5 text-xs font-medium text-wread-text transition hover:bg-wread-bg"
           >
             分类管理
+          </button>
+          <button
+            v-if="isAdmin"
+            @click="showStorageManager = true"
+            class="rounded-full border border-wread-divider bg-white px-5 py-1.5 text-xs font-medium text-wread-text transition hover:bg-wread-bg"
+          >
+            存储管理
           </button>
           <button class="rounded-full bg-[#1b88ee] px-5 py-1.5 text-xs font-medium text-white transition hover:opacity-90">
             下载 Z Reader App 管理书架
@@ -552,7 +415,7 @@ onUnmounted(() => {
           >
             <!-- 书籍封面网格 -->
             <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-wread-bg shadow-sm transition group-hover:shadow-lg">
-              <div v-if="category.books.length === 1" class="h-full w-full">
+              <div v-if="category.books.length === 1 && category.books[0]" class="h-full w-full">
                 <img
                   :src="category.books[0].cover"
                   :alt="category.books[0].title"
@@ -561,7 +424,7 @@ onUnmounted(() => {
               </div>
               <div v-else class="grid h-full w-full grid-cols-2 gap-0.5 bg-white p-0.5">
                 <div
-                  v-for="(book, index) in category.books.slice(0, 4)"
+                  v-for="book in category.books.slice(0, 4)"
                   :key="book.id"
                   class="overflow-hidden"
                 >
@@ -588,9 +451,13 @@ onUnmounted(() => {
       :show="showCategoryManager"
       :categories="categoriesForManager"
       @close="showCategoryManager = false"
-      @create="handleCreateCategory"
-      @update="handleUpdateCategory"
-      @delete="handleDeleteCategory"
+      @refresh="handleRefreshCategories"
+    />
+
+    <!-- 存储提供商管理器 -->
+    <StorageProviderManager
+      :show="showStorageManager"
+      @close="showStorageManager = false"
     />
 
     <!-- 用户信息编辑模态框 -->
